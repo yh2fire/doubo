@@ -1,0 +1,6 @@
+__version__ = "1.0"
+__package_name__ = "doubo"
+__license__ = "MIT"
+__description__ = "Place a buy and a sell order in one go on MetaTrader5"
+__author__ = "phamour"
+__author_email__ = "huang.yipeng@hotmail.com"
