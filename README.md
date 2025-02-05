@@ -29,3 +29,7 @@ An example command to place 0.01 double-end orders on EUR/USD forex with 50 pips
 ```shell
 doubo place EURUSD 0.01 50 100
 ```
+
+## License
+
+[MIT license](LICENSE)
