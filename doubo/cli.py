@@ -61,7 +61,7 @@ def place(
             f"code = {mt5.last_error()}."
         )
     
-    buy_price = symbol_info.ask
+    buy_price = round(symbol_info.ask, symbol_info.digits)
     buy_sl = round(buy_price - sl * symbol_info.point, symbol_info.digits)
     buy_tp = round(buy_price + tp * symbol_info.point, symbol_info.digits)
     buy_request = {
@@ -74,7 +74,7 @@ def place(
         "tp": buy_tp,
         "deviation": deviation,
         "magic": MAGIC,
-        "comment": f"doubo buy at {buy_price}",
+        "comment": f"doubo@{buy_price}", # request max length is 32 (?) while MetaTrader5 display limit is 16
     }
     print(f"Sending buy order at {buy_price} with SL {buy_sl} & TP {buy_tp}.")
     buy_result = mt5.order_send(buy_request)
@@ -89,7 +89,7 @@ def place(
         )
     print(f"Buy order placed with ticket {buy_result.order}")
 
-    sell_price = symbol_info.bid
+    sell_price = round(symbol_info.bid, symbol_info.digits)
     sell_sl = round(sell_price + sl * symbol_info.point, symbol_info.digits)
     sell_tp = round(sell_price - tp * symbol_info.point, symbol_info.digits)
     sell_request = {
@@ -102,7 +102,7 @@ def place(
         "tp": sell_tp,
         "deviation": deviation,
         "magic": MAGIC,
-        "comment": f"doubo sell at {sell_price}",
+        "comment": f"doubo@{sell_price}", # request max length is 32 (?) while MetaTrader5 display limit is 16
     }
     print(f"Sending sell order at {sell_price} with SL {sell_sl} & TP {sell_tp}.")
     sell_result = mt5.order_send(sell_request)
