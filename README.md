@@ -21,13 +21,13 @@ Note that `doubo` depends on MetaTrader's official Python library, which is only
 As of v1.0, only real time market orders are supported:
 
 ```shell
-doubo place <SYMBOL> <VOLUME> <STOP_LOSS_PIPS> <TAKE_PROFIT_PIPS>
+doubo place <SYMBOL> <VOLUME> [--sl <STOP_LOSS_PIPS> | --tp <TAKE_PROFIT_PIPS>]
 ```
 
 An example command to place 0.01 double-end orders on EUR/USD forex with 50 pips stop loss and doubled take profit:
 
 ```shell
-doubo place EURUSD 0.01 50 100
+doubo place EURUSD 0.01 --sl 50 --tp 100
 ```
 
 ## License
