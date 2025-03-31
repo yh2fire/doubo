@@ -1,6 +1,10 @@
 # doubo
 Place a buy and a sell order in one go on MetaTrader5.
 
+## Disclaimer
+
+This tool is provided for informational purposes only and does not constitute financial advice. Users should consult with a qualified financial advisor before making any trading decisions. Additionally, opening two positions in opposite directions simultaneously may violate regulations or policies of certain brokers. Use this tool at your own risk.
+
 ## Pre-requisite
 
 `doubo` interacts with MetaTrader5 to place orders.
