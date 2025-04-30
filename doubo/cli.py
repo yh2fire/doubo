@@ -1,9 +1,8 @@
-import csv
 import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from typing_extensions import Annotated
 
 import click
@@ -12,11 +11,8 @@ import typer
 from rich import print
 
 from doubo.__about__ import __version__
-from doubo.constants import (
-    DEAL_ENTRY_NAMES,
-    DEAL_REASON_NAMES,
-    DEAL_TYPE_NAMES,
-)
+from doubo.errors import DataError, DouboError
+from doubo.history import get_deal_history, save_deals_to_csv
 
 
 APP_NAME = "doubo"
@@ -450,31 +446,10 @@ def history(
         fail(f"Save directory does not exist: {save_dir}.")
     if not save_dir_path.is_dir():
         fail(f"Save path is not a directory: {save_dir}.")
-    save_dir_path = save_dir_path / str(round(time.time()))
-    save_dir_path.mkdir(parents=True, exist_ok=True)
 
-    deals = get_deal_history(start_date, end_date)
-    if not deals:
-        fail("No history deals found.")
-
-    # Save to CSV
-    keys = deals[0].keys()
-    csv_file_path = save_dir_path / f"history_deals_{start}_{end}.csv"
-    with open(csv_file_path, "w", newline="") as csv_file:
-        writer = csv.DictWriter(csv_file, keys)
-        writer.writeheader()
-        writer.writerows(deals)
-    print(f"History deals exported to {str(csv_file_path)}.")
-    click.launch(str(csv_file_path), locate=True)
-
-
-def get_deal_history(
-    start_date: datetime,
-    end_date: datetime,
-) -> List[Dict[str, Any]]:
+    # Get account info for display
     if not mt5.initialize():
         fail("Failed to initialize MetaTrader5 connection.")
-
     account_info = mt5.account_info()
     if account_info is None:
         fail("Failed to get account info.")
@@ -487,22 +462,16 @@ def get_deal_history(
         f"to {datetime.strftime(end_date, '%Y-%m-%d')}..."
     )
 
-    start_ts = get_timestamp(start_date)
-    end_ts = get_timestamp(end_date)
-    deals = mt5.history_deals_get(start_ts, end_ts)
-    if deals is None:
-        fail("Failed to get history deals.")
-
-    deals_parsed = [deal._asdict() for deal in deals]
-    for deal in deals_parsed:
-        deal['type_name'] = DEAL_TYPE_NAMES.get(deal['type'], "Unknown")
-        deal['entry_name'] = DEAL_ENTRY_NAMES.get(deal['entry'], "Unknown")
-        deal['reason_name'] = DEAL_REASON_NAMES.get(deal['reason'], "Unknown")
-    return deals_parsed
-
-
-def get_timestamp(dt: datetime) -> int:
-    return round((dt - datetime(1970, 1, 1)).total_seconds())
+    try:
+        deals = get_deal_history(start_date, end_date)
+        filename = f"history_deals_{start}_{end}.csv"
+        csv_file_path = save_deals_to_csv(deals, save_dir_path, filename)
+        print(f"History deals exported to {str(csv_file_path)}.")
+        click.launch(str(csv_file_path), locate=True)
+    except DataError as e:
+        fail(f"Data error: {e}")
+    except DouboError as e:
+        fail(f"Error: {e}")
 
 
 def version_callback(value: bool):
