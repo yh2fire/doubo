@@ -462,9 +462,10 @@ def history(
         f"to {datetime.strftime(end_date, '%Y-%m-%d')}..."
     )
 
+    filename = f"history_deals_{account_info_dict['login']}_{start}_{end}.csv"
+
     try:
         deals = get_deal_history(start_date, end_date)
-        filename = f"history_deals_{start}_{end}.csv"
         csv_file_path = save_deals_to_csv(deals, save_dir_path, filename)
         print(f"History deals exported to {str(csv_file_path)}.")
         click.launch(str(csv_file_path), locate=True)
