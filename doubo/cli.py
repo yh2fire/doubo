@@ -1,16 +1,28 @@
 import re
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
 from typing_extensions import Annotated
 
+import click
 import MetaTrader5 as mt5
 import typer
 from rich import print
 
 from doubo.__about__ import __version__
+from doubo.errors import DataError, DouboError
+from doubo.history import get_deal_history, save_deals_to_csv
 
 
-app = typer.Typer(name="doubo", no_args_is_help=True)
+APP_NAME = "doubo"
+
+
+app = typer.Typer(name=APP_NAME, no_args_is_help=True)
+
+
+APP_DIR = Path(typer.get_app_dir(APP_NAME))
+APP_DIR.mkdir(parents=True, exist_ok=True)
 
 
 MAGIC = 309613
@@ -378,6 +390,89 @@ def execute_gappy(
         close_price,
     )
     print(f"Position closed, profit: {profit}")
+
+
+@app.command()
+@app.command("h", hidden=True)
+def history(
+    start: Annotated[Optional[str], typer.Option(
+        "--start",
+        "-s",
+        help=(
+            "Start date (included) in the format of 'YYYYMMDD'. "
+            "If not specified, "
+            "all history from 1970-01-01 to end date will be exported. "
+        ),
+    )] = None,
+    end: Annotated[Optional[str], typer.Option(
+        "--end",
+        "-e",
+        help=(
+            "End date (excluded) in the format of 'YYYYMMDD'. "
+            "If not specified, "
+            "all history from start date to now will be exported. "
+        ),
+    )] = None,
+    save_dir: Annotated[str, typer.Option(
+        "--save-dir",
+        "-d",
+        help=(
+            "The directory to save the history files. "
+            f"Default is {str(APP_DIR)}."
+        ),
+    )] = str(APP_DIR),
+):
+    # Validate start date format
+    if not start:
+        start = "19700101"
+    try:
+        start_date = datetime.strptime(start, "%Y%m%d")
+        if start_date < datetime(1970, 1, 1):
+            start_date = datetime(1970, 1, 1)
+    except ValueError:
+        fail(f"Invalid start date format: {start}. Expected 'YYYYMMDD'.")
+
+    # Validate end date format
+    if not end:
+        end = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
+    try:
+        end_date = datetime.strptime(end, "%Y%m%d")
+    except ValueError:
+        fail(f"Invalid end date format: {end}. Expected 'YYYYMMDD'.")
+
+    # Validate save directory
+    save_dir_path = Path(save_dir)
+    if not save_dir_path.exists():
+        fail(f"Save directory does not exist: {save_dir}.")
+    if not save_dir_path.is_dir():
+        fail(f"Save path is not a directory: {save_dir}.")
+
+    # Get account info for display
+    if not mt5.initialize():
+        fail("Failed to initialize MetaTrader5 connection.")
+    account_info = mt5.account_info()
+    if account_info is None:
+        fail("Failed to get account info.")
+    account_info_dict = account_info._asdict()
+    print(
+        "Exporting trading history for account "
+        f"{account_info_dict['login']}: {account_info_dict['name']} "
+        f"({account_info_dict['server']}) "
+        f"from {datetime.strftime(start_date, '%Y-%m-%d')} "
+        f"to {datetime.strftime(end_date, '%Y-%m-%d')}..."
+    )
+
+    filename = f"history_deals_{account_info_dict['login']}_{start}_{end}.csv"
+
+    try:
+        deals = get_deal_history(start_date, end_date)
+        csv_file_path = save_deals_to_csv(deals, save_dir_path, filename)
+        print(f"History deals exported to {str(csv_file_path)}.")
+        click.launch(str(csv_file_path), locate=True)
+    except DataError as e:
+        fail(f"Data error: {e}")
+    except DouboError as e:
+        fail(f"Error: {e}")
 
 
 def version_callback(value: bool):
